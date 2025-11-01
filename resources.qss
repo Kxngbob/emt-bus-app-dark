@@ -1,0 +1,57 @@
+/* Global */
+QMainWindow {
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: "Segoe UI", Roboto, Arial;
+  font-size: 14px;
+}
+QLabel, QPushButton, QLineEdit { color: #e2e8f0; }
+
+/* Inputs */
+QLineEdit {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 10px;
+}
+QLineEdit:focus { border: 1px solid #38bdf8; }
+
+/* Buttons */
+QPushButton {
+  background: #2563eb;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 600;
+}
+QPushButton:hover { background: #1d4ed8; }
+QPushButton:pressed { background: #1e3a8a; }
+
+/* Result rows */
+QFrame#lineItem {
+  background: #1e293b;
+  border-radius: 14px;
+  margin: 4px 0;
+  padding: 8px 12px;
+  border: 1px solid #334155;
+}
+QLabel#badge {
+  background: #38bdf8;
+  color: #0f172a;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+QLabel#eta { color: #34d399; font-weight: 600; }
+
+/* History buttons */
+QPushButton#recentButton {
+  background: #1e40af;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-weight: 500;
+}
+QPushButton#recentButton:hover { background: #1d4ed8; }
+
+/* Scroll */
+QScrollArea { background: transparent; border: none; }
