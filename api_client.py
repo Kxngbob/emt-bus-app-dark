@@ -3,64 +3,87 @@ import requests
 
 
 class ApiClient:
+    """Simple EMT Palma API client for student project."""
     BASE = "https://www.emtpalma.cat/maas/api/v1/agency"
     TIMEOUT = 10
 
     def __init__(self):
         self.token = self._load_token()
 
+  
     def _load_token(self):
-        """Load the API token from token.txt."""
         if not os.path.exists("token.txt"):
             raise RuntimeError("Missing token.txt file.")
         with open("token.txt", "r", encoding="utf-8") as f:
-            return f.read().strip()
+            token = f.read().strip()
+        if not token:
+            raise RuntimeError("token.txt is empty.")
+        return token
 
+    
+    # Build HTTP headers
+   
     def _headers(self):
-        """Basic headers for EMT Palma API."""
-        return {"Authorization": f"Bearer {self.token}"}
+        return {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/141.0.0.0 Safari/537.36"
+            ),
+        }
 
+  
+    # Fetch all bus lines and their colors
+    
     def get_lines(self):
-        """Retrieve all bus lines and their colors."""
+        """Get all line colors for display."""
         url = f"{self.BASE}/lines/"
-        response = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
-        response.raise_for_status()
-        data = response.json()
+        resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
 
         if isinstance(data, dict):
             data = data.get("lines", [])
-        return {str(line.get("shortName")): line.get("color", "#aaaaaa") for line in data}
+        colors = {}
+        for line in data:
+            short = str(line.get("shortName", "")).strip()
+            color = line.get("color", "#aaaaaa")
+            if short:
+                colors[short] = color if color.startswith("#") else f"#{color}"
+        return colors
 
+    
+    # Fetch real-time arrivals using /timestr endpoint
+    
     def get_arrivals(self, stop_id):
-        """Retrieve arrival times for a given stop."""
+        """Retrieve live arrivals from /stops/{id}/timestr endpoint."""
         if not stop_id.isdigit():
             raise ValueError("Stop number must be numeric.")
 
-        url = f"{self.BASE}/stops/{stop_id}/lines"
-        response = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
+        url = f"{self.BASE}/stops/{stop_id}/timestr"
+        resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
 
-        if response.status_code == 404:
+        if resp.status_code == 404:
             raise LookupError("Stop not found.")
-        if response.status_code == 401:
+        if resp.status_code == 401:
             raise PermissionError("Invalid or expired token.")
-        response.raise_for_status()
+        resp.raise_for_status()
 
-        data = response.json()
+        data = resp.json()
 
-        # handle both dict or list responses
-        if isinstance(data, list):
-            lines_data = data
-        elif isinstance(data, dict):
-            lines_data = data.get("lines", [])
-        else:
-            lines_data = []
+        #Handle the actual structure from /timestr
+        if not isinstance(data, list):
+            raise LookupError("Unexpected response format from server.")
 
         arrivals = []
-        for line in lines_data:
-            line_name = line.get("shortName", "?")
-            destination = line.get("destination", {}).get("name", "Unknown")
-            for nxt in line.get("nextArrivals", []):
-                eta = nxt.get("arrivalInMinutes", "?")
-                arrivals.append((line_name, destination, eta))
+        for entry in data:
+            line_name = str(entry.get("lineCode", "?"))
+            for vehicle in entry.get("vehicles", []):
+                dest = vehicle.get("destination", "Unknown")
+                seconds = vehicle.get("seconds", 0)
+                eta_min = round(seconds / 60)
+                arrivals.append((line_name, dest, eta_min))
 
         return arrivals

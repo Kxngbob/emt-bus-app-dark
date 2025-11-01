@@ -3,6 +3,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6 import QtWidgets
 from ui_mainwindow import Ui_MainWindow
+from PyQt6.QtCore import Qt
+
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -57,7 +59,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             eta = QLabel(bus["eta"])
             eta.setObjectName("eta")
-            row.addWidget(eta, 0, QtWidgets.Qt.AlignmentFlag.AlignRight)
+            row.addWidget(eta, 0, Qt.AlignmentFlag.AlignRight)
+
 
             layout.addWidget(card)
 
