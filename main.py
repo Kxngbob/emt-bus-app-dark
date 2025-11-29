@@ -5,10 +5,16 @@ from view import MainWindow
 
 
 def main():
+    """Application entry point."""
     app = QApplication(sys.argv)
+
+    # Create data layer
     model = BusModel()
-    win = MainWindow(model)
-    win.show()
+
+    # Create and show main window
+    window = MainWindow(model)
+    window.show()
+
     sys.exit(app.exec())
 
 

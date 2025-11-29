@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Bus Map</title>
+<style>
+  html, body, #map { height: 100%; margin:0; padding:0; }
+</style>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+
+<body>
+<div id="map"></div>
+
+<script>
+let map = L.map('map').setView([39.57, 2.65], 12);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let bridge = null;
+
+new QWebChannel(qt.webChannelTransport, function(channel) {
+    bridge = channel.objects.bridge;
+});
+
+function loadStops(stops) {
+    stops.forEach(s => {
+        let m = L.marker([s.lat, s.lon]).addTo(map);
+        m.bindPopup(s.name);
+        m.on("click", () => {
+            if (bridge) {
+                bridge.clickStop(s.id);
+            }
+        });
+    });
+}
+</script>
+
+</body>
+</html>

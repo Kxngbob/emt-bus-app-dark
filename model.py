@@ -4,33 +4,53 @@ import re
 
 
 class BusModel:
-    """Connects API client with view logic."""
+
     def __init__(self):
         self.api = ApiClient()
         self.last_stop = None
-        self.colors = self.api.get_lines()
 
+        # Load line colors for Tab 1
+        try:
+            self.colors = self.api.get_lines()
+        except:
+            self.colors = {}
+
+    # ----------------------------------------------------
+    # Normalize to match EMT logic
+    # ----------------------------------------------------
     def _normalize(self, code: str) -> str:
-        """Strip non-digits, pad to 2 digits."""
-        digits = re.sub(r"\D", "", code or "")
-        return digits.zfill(2) if digits else code
+        if not code:
+            return ""
 
+        code = str(code).strip()
+
+        # Airport and letter lines (A1, A2...)
+        if code[0].isalpha():
+            return code.upper()
+
+        # Pure numeric lines
+        digits = re.sub(r"\D", "", code)
+        return str(int(digits)) if digits else code
+
+    # ----------------------------------------------------
+    # Fetch arrivals for Tab 1
+    # ----------------------------------------------------
     def fetch_arrivals(self, stop_id):
-        """Fetch arrivals and prepare them for display."""
+
         arrivals = self.api.get_arrivals(stop_id)
         if not arrivals:
-            raise LookupError("No arrivals available for this stop.")
-        self.last_stop = stop_id
+            raise LookupError("No arrivals for this stop.")
 
         formatted = []
-        for line, dest, eta in arrivals:
-            norm = self._normalize(line)
 
-            # Normalize all color keys once for consistent lookup
+        for line, dest, eta in arrivals:
+
+            norm = self._normalize(line)
             color = "#6b7280"
-            for key, val in self.colors.items():
+
+            for key, value in self.colors.items():
                 if self._normalize(key) == norm:
-                    color = val if val.startswith("#") else f"#{val}"
+                    color = value if value.startswith("#") else f"#{value}"
                     break
 
             formatted.append({

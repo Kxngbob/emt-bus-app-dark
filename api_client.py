@@ -10,7 +10,6 @@ class ApiClient:
     def __init__(self):
         self.token = self._load_token()
 
-  
     def _load_token(self):
         if not os.path.exists("token.txt"):
             raise RuntimeError("Missing token.txt file.")
@@ -20,9 +19,6 @@ class ApiClient:
             raise RuntimeError("token.txt is empty.")
         return token
 
-    
-    # Build HTTP headers
-   
     def _headers(self):
         return {
             "Authorization": f"Bearer {self.token}",
@@ -34,11 +30,21 @@ class ApiClient:
             ),
         }
 
-  
-    # Fetch all bus lines and their colors
-    
+    # ----------------------------------------------------
+    # Line list (raw)
+    # ----------------------------------------------------
+    def get_lines_raw(self):
+        url = f"{self.BASE}/lines/"
+        resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("lines", []) if isinstance(data, dict) else data
+
+    # ----------------------------------------------------
+    # Colors for Tab 1
+    # ----------------------------------------------------
     def get_lines(self):
-        """Get all line colors for display."""
+        """Return dict: code -> color"""
         url = f"{self.BASE}/lines/"
         resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
         resp.raise_for_status()
@@ -46,19 +52,29 @@ class ApiClient:
 
         if isinstance(data, dict):
             data = data.get("lines", [])
+
         colors = {}
+
         for line in data:
-            short = str(line.get("shortName", "")).strip()
-            color = line.get("color", "#aaaaaa")
-            if short:
-                colors[short] = color if color.startswith("#") else f"#{color}"
+            code = line.get("code") or line.get("shortName") or ""
+            if not code:
+                continue
+
+            raw_color = line.get("color")  
+            if raw_color and raw_color.startswith("#"):
+                color = raw_color
+            else:
+                rc = line.get("routeColor")
+                color = f"#{rc}" if rc else "#aaaaaa"
+
+            colors[code] = color
+
         return colors
 
-    
-    # Fetch real-time arrivals using /timestr endpoint
-    
+    # ----------------------------------------------------
+    # STOP ARRIVALS
+    # ----------------------------------------------------
     def get_arrivals(self, stop_id):
-        """Retrieve live arrivals from /stops/{id}/timestr endpoint."""
         if not stop_id.isdigit():
             raise ValueError("Stop number must be numeric.")
 
@@ -68,14 +84,13 @@ class ApiClient:
         if resp.status_code == 404:
             raise LookupError("Stop not found.")
         if resp.status_code == 401:
-            raise PermissionError("Invalid or expired token.")
-        resp.raise_for_status()
+            raise PermissionError("Invalid token.")
 
+        resp.raise_for_status()
         data = resp.json()
 
-        #Handle the actual structure from /timestr
         if not isinstance(data, list):
-            raise LookupError("Unexpected response format from server.")
+            raise ValueError("Unexpected response format from timestr endpoint.")
 
         arrivals = []
         for entry in data:
@@ -83,7 +98,16 @@ class ApiClient:
             for vehicle in entry.get("vehicles", []):
                 dest = vehicle.get("destination", "Unknown")
                 seconds = vehicle.get("seconds", 0)
-                eta_min = round(seconds / 60)
+                eta_min = max(0, round(seconds / 60))
                 arrivals.append((line_name, dest, eta_min))
 
         return arrivals
+
+    # ----------------------------------------------------
+    # LINE INFO (routes, directions)
+    # ----------------------------------------------------
+    def get_line_info(self, line_id):
+        url = f"{self.BASE}/lines/{line_id}/info"
+        resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
+        resp.raise_for_status()
+        return resp.json()
