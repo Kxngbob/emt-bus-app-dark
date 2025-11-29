@@ -9,7 +9,6 @@ from ui_mainwindow import Ui_MainWindow
 from map_window import MapWindow
 
 
-
 class MainWindow(QMainWindow, Ui_MainWindow):
 
     def __init__(self, model):
@@ -27,6 +26,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Setup Tab 2
         self._setup_lines_tab()
 
+        # Tab 1 behaviour
         self.checkButton.clicked.connect(self.check_stop)
         self.stopInput.returnPressed.connect(self.check_stop)
 
@@ -132,56 +132,84 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.linesList.setItemWidget(item, widget)
 
     # ----------------------------------------------------
-    # LOAD ROUTES FOR A LINE
+    # SUBLINES (RIGHT LIST, FIRST LEVEL FOR TAB 2)
     # ----------------------------------------------------
-    def _populate_directions_for_line(self, line):
+    def _populate_sublines(self, sublines, line):
+        """
+        First click on a line -> we show its sublines here.
+        Each entry is type 'subline' and holds subline_id.
+        """
         self.directionsList.clear()
-
-        line_id = self._extract_line_id(line)
         line_code = self._extract_line_code(line)
 
-        try:
-            info = self.model.api.get_line_info(line_id)
-        except Exception as e:
-            lbl = QLabel(f"<b>Error cargando rutas</b><br>{e}")
+        if not sublines:
+            lbl = QLabel("<b>No hay sublíneas para esta línea.</b>")
             item = QListWidgetItem()
             item.setSizeHint(lbl.sizeHint())
             self.directionsList.addItem(item)
             self.directionsList.setItemWidget(item, lbl)
             return
 
-        routes = info.get("routes", [])
+        for sub in sublines:
+            name = sub.get("longName", "Sublinea")
+            sid = sub.get("subLineId")
 
-        if not routes:
-            lbl = QLabel("<b>No hay rutas disponibles</b>")
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.setContentsMargins(6, 4, 6, 4)
+
+            t = QLabel(f"<b>{line_code} — {name}</b>")
+            layout.addWidget(t)
+
+            item = QListWidgetItem()
+            item.setSizeHint(widget.sizeHint())
+
+            # store subline info
+            item.setData(Qt.ItemDataRole.UserRole, {
+                "type": "subline",
+                "line": line_code,
+                "subline_id": sid
+            })
+
+            self.directionsList.addItem(item)
+            self.directionsList.setItemWidget(item, widget)
+
+    # ----------------------------------------------------
+    # DIRECTIONS (SECOND LEVEL FOR TAB 2)
+    # ----------------------------------------------------
+    def _populate_directions(self, directions, line_code):
+        """
+        Click on a subline -> we show its directions/headsigns here.
+        Each entry is type 'direction' and later opens the map.
+        """
+        self.directionsList.clear()
+
+        if not directions:
+            lbl = QLabel("<b>No hay direcciones para esta sublínea.</b>")
             item = QListWidgetItem()
             item.setSizeHint(lbl.sizeHint())
             self.directionsList.addItem(item)
             self.directionsList.setItemWidget(item, lbl)
             return
 
-        for r in routes:
-            origin = r.get("origin", "Origen")
-            dest = r.get("destination", "Destino")
-            rid = r.get("id")
+        for d in directions:
+            head = d.get("headSign", "Destino")
+            trip = d.get("tripId")
 
             widget = QWidget()
             v = QVBoxLayout(widget)
             v.setContentsMargins(6, 4, 6, 4)
 
-            title = QLabel(f"<b>{line_code} → {dest}</b>")
-            v.addWidget(title)
-
-            meta = QLabel(f"<span style='color:#888;'>Desde: {origin}</span>")
-            meta.setStyleSheet("font-size:11px;")
-            v.addWidget(meta)
+            t = QLabel(f"<b>{line_code} → {head}</b>")
+            v.addWidget(t)
 
             item = QListWidgetItem()
             item.setSizeHint(widget.sizeHint())
             item.setData(Qt.ItemDataRole.UserRole, {
+                "type": "direction",
                 "line": line_code,
-                "direction": dest,
-                "route_id": rid
+                "direction": head,
+                "trip_id": trip
             })
 
             self.directionsList.addItem(item)
@@ -192,17 +220,54 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # ----------------------------------------------------
     def _on_line_clicked(self, item):
         idx = item.data(Qt.ItemDataRole.UserRole)
-        self._populate_directions_for_line(self.lines_data[idx])
+        line = self.lines_data[idx]
+
+        line_id = self._extract_line_id(line)
+        if not line_id:
+            QMessageBox.warning(self, "Error", "No line ID found.")
+            return
+
+        try:
+            sublines = self.model.get_sublines(line_id)
+        except Exception as e:
+            QMessageBox.critical(self, "Error loading sublines", str(e))
+            return
+
+        self._populate_sublines(sublines, line)
 
     def _on_direction_clicked(self, item):
-        p = item.data(Qt.ItemDataRole.UserRole)
-        QMessageBox.information(
-            self,
-            "Dirección seleccionada",
-            f"Línea: {p['line']}\n"
-            f"Dirección: {p['direction']}\n"
-            f"ID ruta: {p['route_id']}"
-        )
+        data = item.data(Qt.ItemDataRole.UserRole)
+        if not isinstance(data, dict):
+            return
+
+        # First click on a subline -> load its directions
+        if data.get("type") == "subline":
+            sid = data.get("subline_id")
+            line_code = data.get("line", "?")
+            try:
+                directions = self.model.get_directions(sid)
+            except Exception as e:
+                QMessageBox.critical(self, "Error loading directions", str(e))
+                return
+
+            self._populate_directions(directions, line_code)
+            return
+
+        # Second click on a real direction -> open map
+        if data.get("type") == "direction":
+            line_code = data["line"]
+            direction = data.get("direction", "")
+
+            # TODO: replace this with REAL EMT stop data when you hook trips to stops
+            stops = [
+                ("17", 39.5715, 2.6500, f"Parada 17 ({direction})"),
+                ("33", 39.5750, 2.6400, f"Parada 33 ({direction})"),
+                ("401", 39.5650, 2.6550, f"Parada 401 ({direction})"),
+            ]
+
+            self.mapWindow = MapWindow(line_code, stops)
+            self.mapWindow.bridge.stopSelected.connect(self._on_map_stop_selected)
+            self.mapWindow.show()
 
     # ----------------------------------------------------
     # TAB 1 STOP LOOKUP
@@ -266,12 +331,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.stopInput.setText(stop)
         self.check_stop()
 
-    
-    def _on_map_stop_selected(self, stop_id):
+    # ----------------------------------------------------
+    # MAP → TAB 1
+    # ----------------------------------------------------
+    def _on_map_stop_selected(self, stop_id: str):
+        """
+        Called when the user clicks a stop in the map.
+        It switches to Tab 1 and behaves like consulting that stop.
+        """
         self.tabWidget.setCurrentIndex(0)
         self.stopInput.setText(stop_id)
         self.check_stop()
-     
-    
-    
-

@@ -10,13 +10,19 @@ class ApiClient:
     def __init__(self):
         self.token = self._load_token()
 
+    # ----------------------------------------------------
+    # TOKEN
+    # ----------------------------------------------------
     def _load_token(self):
         if not os.path.exists("token.txt"):
             raise RuntimeError("Missing token.txt file.")
+
         with open("token.txt", "r", encoding="utf-8") as f:
             token = f.read().strip()
+
         if not token:
             raise RuntimeError("token.txt is empty.")
+
         return token
 
     def _headers(self):
@@ -31,20 +37,20 @@ class ApiClient:
         }
 
     # ----------------------------------------------------
-    # Line list (raw)
+    # RAW LINES (Tab 2 Left)
     # ----------------------------------------------------
     def get_lines_raw(self):
         url = f"{self.BASE}/lines/"
         resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
+
         return data.get("lines", []) if isinstance(data, dict) else data
 
     # ----------------------------------------------------
-    # Colors for Tab 1
+    # LINE COLORS (Tab 1)
     # ----------------------------------------------------
     def get_lines(self):
-        """Return dict: code -> color"""
         url = f"{self.BASE}/lines/"
         resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
         resp.raise_for_status()
@@ -60,7 +66,8 @@ class ApiClient:
             if not code:
                 continue
 
-            raw_color = line.get("color")  
+            # Color priority: "color" > "routeColor"
+            raw_color = line.get("color")
             if raw_color and raw_color.startswith("#"):
                 color = raw_color
             else:
@@ -72,7 +79,7 @@ class ApiClient:
         return colors
 
     # ----------------------------------------------------
-    # STOP ARRIVALS
+    # STOP ARRIVALS (Tab 1)
     # ----------------------------------------------------
     def get_arrivals(self, stop_id):
         if not stop_id.isdigit():
@@ -90,7 +97,7 @@ class ApiClient:
         data = resp.json()
 
         if not isinstance(data, list):
-            raise ValueError("Unexpected response format from timestr endpoint.")
+            raise ValueError("Unexpected format from timestr endpoint.")
 
         arrivals = []
         for entry in data:
@@ -104,10 +111,51 @@ class ApiClient:
         return arrivals
 
     # ----------------------------------------------------
-    # LINE INFO (routes, directions)
+    # FULL LINE INFO (old, but still available)
     # ----------------------------------------------------
     def get_line_info(self, line_id):
         url = f"{self.BASE}/lines/{line_id}/info"
+        resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
+        resp.raise_for_status()
+        return resp.json()
+
+    # ----------------------------------------------------
+    # SUBLINES (Tab 2: first click)
+    # ----------------------------------------------------
+    def get_sublines(self, line_id):
+        """
+        Returns something like:
+        [
+            {
+                "subLineId": 1046,
+                "longName": "Universitat",
+                "shortName": "Universitat",
+                "externalCode": 1,
+                "lineId": 19
+            }
+        ]
+        """
+        url = f"{self.BASE}/lines/{line_id}/sublines"
+        resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
+        resp.raise_for_status()
+        return resp.json()
+
+    # ----------------------------------------------------
+    # DIRECTIONS FOR A SUBLINE (Tab 2: second click)
+    # ----------------------------------------------------
+    def get_directions_for_subline(self, subline_id):
+        """
+        Returns something like:
+        [
+            {
+                "tripId": 49,
+                "headSign": "UIB i Parc Bit",
+                "directionId": 1
+            },
+            ...
+        ]
+        """
+        url = f"{self.BASE}/lines/directions-subline?subLineId={subline_id}"
         resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
         resp.raise_for_status()
         return resp.json()
