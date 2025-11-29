@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <!-- FIX: Load Leaflet BEFORE folium JS -->
+    <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     
     <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
@@ -17,7 +23,7 @@
             <meta name="viewport" content="width=device-width,
                 initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
-                #map_9869a8fc4a884901cd2c5b5d27ea89e6 {
+                #map_6944378cea3f6d097739cedb9059e17f {
                     position: relative;
                     width: 100.0%;
                     height: 100.0%;
@@ -54,32 +60,32 @@
 <body>
     
     
-            <div class="folium-map" id="map_9869a8fc4a884901cd2c5b5d27ea89e6" ></div>
+            <div class="folium-map" id="map_6944378cea3f6d097739cedb9059e17f" ></div>
         
 
-<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
-<script>
-    var bridge = null;
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script>
+        var pybridge = null;
 
-    new QWebChannel(qt.webChannelTransport, function(channel) {
-        bridge = channel.objects.bridge;
-    });
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+            pybridge = channel.objects.bridge;
+        });
 
-    function sendStopToPython(stop_id) {
-        if (bridge && bridge.receiveStop) {
-            bridge.receiveStop(stop_id);
-        } else {
-            console.log("Bridge not ready");
+        function sendStopToPython(stop_id) {
+            if (pybridge) {
+                pybridge.receiveStop(stop_id);
+            } else {
+                console.log("Bridge missing");
+            }
         }
-    }
-</script>
-
+    </script>
 </body>
+
 <script>
     
     
-            var map_9869a8fc4a884901cd2c5b5d27ea89e6 = L.map(
-                "map_9869a8fc4a884901cd2c5b5d27ea89e6",
+            var map_6944378cea3f6d097739cedb9059e17f = L.map(
+                "map_6944378cea3f6d097739cedb9059e17f",
                 {
                     center: [39.5705, 2.6483333333333334],
                     crs: L.CRS.EPSG3857,
@@ -96,7 +102,7 @@
 
         
     
-            var tile_layer_703dcd29a0145845d66f91726c967d8b = L.tileLayer(
+            var tile_layer_72e690c9fa5fffea437e3d63964cbd0b = L.tileLayer(
                 "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 {
   "minZoom": 0,
@@ -113,17 +119,17 @@
             );
         
     
-            tile_layer_703dcd29a0145845d66f91726c967d8b.addTo(map_9869a8fc4a884901cd2c5b5d27ea89e6);
+            tile_layer_72e690c9fa5fffea437e3d63964cbd0b.addTo(map_6944378cea3f6d097739cedb9059e17f);
         
     
-            var marker_034ba8482d3043f7a4d9fd7ae4eb2792 = L.marker(
+            var marker_6da0f71878d9d09d4eafa095fbd16708 = L.marker(
                 [39.5715, 2.65],
                 {
 }
-            ).addTo(map_9869a8fc4a884901cd2c5b5d27ea89e6);
+            ).addTo(map_6944378cea3f6d097739cedb9059e17f);
         
     
-            var icon_56cea9198af4cf962f869a344e638dd7 = L.AwesomeMarkers.icon(
+            var icon_9d13f42863177de70c65520ed8c59730 = L.AwesomeMarkers.icon(
                 {
   "markerColor": "red",
   "iconColor": "white",
@@ -134,26 +140,26 @@
             );
         
     
-        var popup_746c5f9ba92e7eb233718f62c349c941 = L.popup({
+        var popup_f93e83fd3a65f80616cb2944d54a1edb = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_be47daf219a798d009582eeb45ff1b43 = $(`<div id="html_be47daf219a798d009582eeb45ff1b43" style="width: 100.0%; height: 100.0%;">                 <b>Parada 17 (Dic de l'Oest)</b><br>                 <button onclick="sendStopToPython('17')">                     Consultar parada 17                 </button>             </div>`)[0];
-                popup_746c5f9ba92e7eb233718f62c349c941.setContent(html_be47daf219a798d009582eeb45ff1b43);
+                var html_f1b65159008d08b85a86126005a8320c = $(`<div id="html_f1b65159008d08b85a86126005a8320c" style="width: 100.0%; height: 100.0%;">                 <b>Parada 17 (Can Blau)</b><br>                 <button onclick="sendStopToPython('17')">                     Consultar parada 17                 </button>             </div>`)[0];
+                popup_f93e83fd3a65f80616cb2944d54a1edb.setContent(html_f1b65159008d08b85a86126005a8320c);
             
         
 
-        marker_034ba8482d3043f7a4d9fd7ae4eb2792.bindPopup(popup_746c5f9ba92e7eb233718f62c349c941)
+        marker_6da0f71878d9d09d4eafa095fbd16708.bindPopup(popup_f93e83fd3a65f80616cb2944d54a1edb)
         ;
 
         
     
     
-            marker_034ba8482d3043f7a4d9fd7ae4eb2792.bindTooltip(
+            marker_6da0f71878d9d09d4eafa095fbd16708.bindTooltip(
                 `<div>
-                     17 - Parada 17 (Dic de l'Oest)
+                     17 - Parada 17 (Can Blau)
                  </div>`,
                 {
   "sticky": true,
@@ -161,17 +167,17 @@
             );
         
     
-                marker_034ba8482d3043f7a4d9fd7ae4eb2792.setIcon(icon_56cea9198af4cf962f869a344e638dd7);
+                marker_6da0f71878d9d09d4eafa095fbd16708.setIcon(icon_9d13f42863177de70c65520ed8c59730);
             
     
-            var marker_ea4c433459026f67609458f8622abbf7 = L.marker(
+            var marker_1c8c4e118bacd4bdd03d56ee799daa47 = L.marker(
                 [39.575, 2.64],
                 {
 }
-            ).addTo(map_9869a8fc4a884901cd2c5b5d27ea89e6);
+            ).addTo(map_6944378cea3f6d097739cedb9059e17f);
         
     
-            var icon_58541faad4ab5b53a2464a1657a4670c = L.AwesomeMarkers.icon(
+            var icon_80f9819dc1008d87f6837285f75d1dc5 = L.AwesomeMarkers.icon(
                 {
   "markerColor": "red",
   "iconColor": "white",
@@ -182,26 +188,26 @@
             );
         
     
-        var popup_99574e41c787eed3590001c571ccc480 = L.popup({
+        var popup_ffd848b98248bb40933606f5b65f0f26 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_4f5684fb4aec338af04df1f2f3a27127 = $(`<div id="html_4f5684fb4aec338af04df1f2f3a27127" style="width: 100.0%; height: 100.0%;">                 <b>Parada 33 (Dic de l'Oest)</b><br>                 <button onclick="sendStopToPython('33')">                     Consultar parada 33                 </button>             </div>`)[0];
-                popup_99574e41c787eed3590001c571ccc480.setContent(html_4f5684fb4aec338af04df1f2f3a27127);
+                var html_58551cb0d9f7baac41ccf6e6a855a6ea = $(`<div id="html_58551cb0d9f7baac41ccf6e6a855a6ea" style="width: 100.0%; height: 100.0%;">                 <b>Parada 33 (Can Blau)</b><br>                 <button onclick="sendStopToPython('33')">                     Consultar parada 33                 </button>             </div>`)[0];
+                popup_ffd848b98248bb40933606f5b65f0f26.setContent(html_58551cb0d9f7baac41ccf6e6a855a6ea);
             
         
 
-        marker_ea4c433459026f67609458f8622abbf7.bindPopup(popup_99574e41c787eed3590001c571ccc480)
+        marker_1c8c4e118bacd4bdd03d56ee799daa47.bindPopup(popup_ffd848b98248bb40933606f5b65f0f26)
         ;
 
         
     
     
-            marker_ea4c433459026f67609458f8622abbf7.bindTooltip(
+            marker_1c8c4e118bacd4bdd03d56ee799daa47.bindTooltip(
                 `<div>
-                     33 - Parada 33 (Dic de l'Oest)
+                     33 - Parada 33 (Can Blau)
                  </div>`,
                 {
   "sticky": true,
@@ -209,17 +215,17 @@
             );
         
     
-                marker_ea4c433459026f67609458f8622abbf7.setIcon(icon_58541faad4ab5b53a2464a1657a4670c);
+                marker_1c8c4e118bacd4bdd03d56ee799daa47.setIcon(icon_80f9819dc1008d87f6837285f75d1dc5);
             
     
-            var marker_0bd44f1e90c71e6f5ff8336b64b4bcb4 = L.marker(
+            var marker_a78c2053caeb49caec1f38f5a5513307 = L.marker(
                 [39.565, 2.655],
                 {
 }
-            ).addTo(map_9869a8fc4a884901cd2c5b5d27ea89e6);
+            ).addTo(map_6944378cea3f6d097739cedb9059e17f);
         
     
-            var icon_ed61313826b509731ee598d5783eb81a = L.AwesomeMarkers.icon(
+            var icon_13edc5a3568a1dc261d8ef9fd8e080a0 = L.AwesomeMarkers.icon(
                 {
   "markerColor": "red",
   "iconColor": "white",
@@ -230,26 +236,26 @@
             );
         
     
-        var popup_e463bea8dab88c5ee8b9a7755f2ce576 = L.popup({
+        var popup_de172aa54144b89d27c4f253fd467678 = L.popup({
   "maxWidth": "100%",
 });
 
         
             
-                var html_6642d1b98d3d18fe2e345332011c74be = $(`<div id="html_6642d1b98d3d18fe2e345332011c74be" style="width: 100.0%; height: 100.0%;">                 <b>Parada 401 (Dic de l'Oest)</b><br>                 <button onclick="sendStopToPython('401')">                     Consultar parada 401                 </button>             </div>`)[0];
-                popup_e463bea8dab88c5ee8b9a7755f2ce576.setContent(html_6642d1b98d3d18fe2e345332011c74be);
+                var html_48188302725897eefb042a29291cc488 = $(`<div id="html_48188302725897eefb042a29291cc488" style="width: 100.0%; height: 100.0%;">                 <b>Parada 401 (Can Blau)</b><br>                 <button onclick="sendStopToPython('401')">                     Consultar parada 401                 </button>             </div>`)[0];
+                popup_de172aa54144b89d27c4f253fd467678.setContent(html_48188302725897eefb042a29291cc488);
             
         
 
-        marker_0bd44f1e90c71e6f5ff8336b64b4bcb4.bindPopup(popup_e463bea8dab88c5ee8b9a7755f2ce576)
+        marker_a78c2053caeb49caec1f38f5a5513307.bindPopup(popup_de172aa54144b89d27c4f253fd467678)
         ;
 
         
     
     
-            marker_0bd44f1e90c71e6f5ff8336b64b4bcb4.bindTooltip(
+            marker_a78c2053caeb49caec1f38f5a5513307.bindTooltip(
                 `<div>
-                     401 - Parada 401 (Dic de l'Oest)
+                     401 - Parada 401 (Can Blau)
                  </div>`,
                 {
   "sticky": true,
@@ -257,7 +263,7 @@
             );
         
     
-                marker_0bd44f1e90c71e6f5ff8336b64b4bcb4.setIcon(icon_ed61313826b509731ee598d5783eb81a);
+                marker_a78c2053caeb49caec1f38f5a5513307.setIcon(icon_13edc5a3568a1dc261d8ef9fd8e080a0);
             
 </script>
 </html>
