@@ -44,7 +44,6 @@ class ApiClient:
         resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
-
         return data.get("lines", []) if isinstance(data, dict) else data
 
     # ----------------------------------------------------
@@ -60,13 +59,11 @@ class ApiClient:
             data = data.get("lines", [])
 
         colors = {}
-
         for line in data:
             code = line.get("code") or line.get("shortName") or ""
             if not code:
                 continue
 
-            # Color priority: "color" > "routeColor"
             raw_color = line.get("color")
             if raw_color and raw_color.startswith("#"):
                 color = raw_color
@@ -111,50 +108,18 @@ class ApiClient:
         return arrivals
 
     # ----------------------------------------------------
-    # FULL LINE INFO (old, but still available)
-    # ----------------------------------------------------
-    def get_line_info(self, line_id):
-        url = f"{self.BASE}/lines/{line_id}/info"
-        resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
-        resp.raise_for_status()
-        return resp.json()
-
-    # ----------------------------------------------------
-    # SUBLINES (Tab 2: first click)
+    # SUBLINES (Tab 2 — first click)
     # ----------------------------------------------------
     def get_sublines(self, line_id):
-        """
-        Returns something like:
-        [
-            {
-                "subLineId": 1046,
-                "longName": "Universitat",
-                "shortName": "Universitat",
-                "externalCode": 1,
-                "lineId": 19
-            }
-        ]
-        """
         url = f"{self.BASE}/lines/{line_id}/sublines"
         resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
         resp.raise_for_status()
         return resp.json()
 
     # ----------------------------------------------------
-    # DIRECTIONS FOR A SUBLINE (Tab 2: second click)
+    # DIRECTIONS FOR A SUBLINE (Tab 2 — second click)
     # ----------------------------------------------------
     def get_directions_for_subline(self, subline_id):
-        """
-        Returns something like:
-        [
-            {
-                "tripId": 49,
-                "headSign": "UIB i Parc Bit",
-                "directionId": 1
-            },
-            ...
-        ]
-        """
         url = f"{self.BASE}/lines/directions-subline?subLineId={subline_id}"
         resp = requests.get(url, headers=self._headers(), timeout=self.TIMEOUT)
         resp.raise_for_status()
