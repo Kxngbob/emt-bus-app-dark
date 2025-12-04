@@ -10,30 +10,39 @@ from map_window import MapWindow
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
+    """
+    Main GUI controller.
+    Handles:
+    - Tab 1 (stop lookup)
+    - Tab 2 (lines → sublines → directions)
+    - Opening map window with real EMT data
+    """
 
     def __init__(self, model):
         super().__init__()
         self.model = model
 
-        # Build original UI (Tab 1)
+        # Build UI created in Qt Designer
         self.setupUi(self)
         self.tab1 = self.centralwidget
 
         # Setup tabs
         self._setup_tabs()
+
+        # Re-bind Tab 1 widgets after embedding them in a tab
         self._rebind_tab1_widgets()
 
-        # Setup Tab 2
+        # Build Tab 2 layout
         self._setup_lines_tab()
 
-        # Tab 1 behaviour
+        # Tab 1 logic
         self.checkButton.clicked.connect(self.check_stop)
         self.stopInput.returnPressed.connect(self.check_stop)
 
         self.recent_stops = []
 
     # ----------------------------------------------------
-    # TAB FIX BINDINGS
+    # Fix references to widgets in Tab 1
     # ----------------------------------------------------
     def _rebind_tab1_widgets(self):
         self.scrollArea = self.tab1.findChild(QtWidgets.QScrollArea, "scrollArea")
@@ -41,7 +50,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.recentGrid = self.tab1.findChild(QGridLayout, "recentGrid")
 
     # ----------------------------------------------------
-    # TAB WRAPPER
+    # Tabs container
     # ----------------------------------------------------
     def _setup_tabs(self):
         self.tabWidget = QtWidgets.QTabWidget()
@@ -51,22 +60,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setCentralWidget(self.tabWidget)
 
     # ----------------------------------------------------
-    # TAB 2 BUILD
+    # TAB 2: Layout (lines on left, sublines/directions on right)
     # ----------------------------------------------------
     def _setup_lines_tab(self):
         layout = QVBoxLayout(self.tab2)
 
+        # Titles row
         titles = QHBoxLayout()
         layout.addLayout(titles)
 
-        t1 = QLabel("Líneas")
-        t1.setStyleSheet("font-size:16px; font-weight:700;")
-        titles.addWidget(t1)
+        lbl_left = QLabel("Líneas")
+        lbl_left.setStyleSheet("font-size:16px; font-weight:700;")
+        titles.addWidget(lbl_left)
 
-        t2 = QLabel("Sublíneas y dirección")
-        t2.setStyleSheet("font-size:16px; font-weight:700;")
-        titles.addWidget(t2)
+        lbl_right = QLabel("Sublíneas y dirección")
+        lbl_right.setStyleSheet("font-size:16px; font-weight:700;")
+        titles.addWidget(lbl_right)
 
+        # Two list widgets
         content = QHBoxLayout()
         layout.addLayout(content)
 
@@ -75,6 +86,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         content.addWidget(self.linesList)
         content.addWidget(self.directionsList)
 
+        # Load EMT lines
         try:
             self.lines_data = self.model.api.get_lines_raw()
         except Exception as e:
@@ -83,18 +95,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self._populate_lines()
 
+        # Click handlers
         self.linesList.itemClicked.connect(self._on_line_clicked)
         self.directionsList.itemClicked.connect(self._on_direction_clicked)
 
     # ----------------------------------------------------
-    # TAB 2 HELPERS
+    # Helpers to extract fields from line dicts
     # ----------------------------------------------------
     def _extract_line_code(self, line):
         return line.get("code") or line.get("shortName") or "?"
 
     def _extract_line_id(self, line):
-        return line.get("routeGtfsId") or line.get("id")
+        # Numeric ID used by EMT line endpoints
+        return line.get("id") or line.get("routeGtfsId")
 
+    # ----------------------------------------------------
+    # Left column: Lines list
+    # ----------------------------------------------------
     def _populate_lines(self):
         self.linesList.clear()
 
@@ -102,6 +119,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             code = self._extract_line_code(line)
             name = line.get("name", "")
 
+            # Color logic (Tab 2 badge)
             raw_color = line.get("color")
             if raw_color and raw_color.startswith("#"):
                 color = raw_color
@@ -109,6 +127,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 rc = line.get("routeColor")
                 color = f"#{rc}" if rc else "#999999"
 
+            # Visual row
             widget = QWidget()
             h = QHBoxLayout(widget)
             h.setContentsMargins(6, 4, 6, 4)
@@ -132,15 +151,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.linesList.setItemWidget(item, widget)
 
     # ----------------------------------------------------
-    # SUBLINES (RIGHT LIST, FIRST LEVEL FOR TAB 2)
+    # Right column — Sublines (first level)
     # ----------------------------------------------------
     def _populate_sublines(self, sublines, line):
         """
-        First click on a line -> we show its sublines here.
-        Each entry is type 'subline' and holds subline_id.
+        Show sublines of a selected line.
+        Each item is clickable and will load directions.
         """
         self.directionsList.clear()
         line_code = self._extract_line_code(line)
+        line_id = self._extract_line_id(line)
 
         if not sublines:
             lbl = QLabel("<b>No hay sublíneas para esta línea.</b>")
@@ -151,23 +171,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             return
 
         for sub in sublines:
-            name = sub.get("longName", "Sublinea")
+            name = sub.get("longName", "Sublínea")
             sid = sub.get("subLineId")
 
             widget = QWidget()
-            layout = QVBoxLayout(widget)
-            layout.setContentsMargins(6, 4, 6, 4)
+            v = QVBoxLayout(widget)
+            v.setContentsMargins(6, 4, 6, 4)
 
             t = QLabel(f"<b>{line_code} — {name}</b>")
-            layout.addWidget(t)
+            v.addWidget(t)
 
             item = QListWidgetItem()
             item.setSizeHint(widget.sizeHint())
 
-            # store subline info
+            # We keep line code, line ID and subline ID for the next click
             item.setData(Qt.ItemDataRole.UserRole, {
                 "type": "subline",
                 "line": line_code,
+                "line_id": line_id,
                 "subline_id": sid
             })
 
@@ -175,12 +196,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.directionsList.setItemWidget(item, widget)
 
     # ----------------------------------------------------
-    # DIRECTIONS (SECOND LEVEL FOR TAB 2)
+    # Right column — Directions (second level)
     # ----------------------------------------------------
-    def _populate_directions(self, directions, line_code):
+    def _populate_directions(self, directions, line_code, line_id):
         """
-        Click on a subline -> we show its directions/headsigns here.
-        Each entry is type 'direction' and later opens the map.
+        Show directions (headSigns) for a chosen subline.
+        Direction items are the ones that open the map.
         """
         self.directionsList.clear()
 
@@ -205,9 +226,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             item = QListWidgetItem()
             item.setSizeHint(widget.sizeHint())
+
+            # Store all info needed to fetch route + open map
             item.setData(Qt.ItemDataRole.UserRole, {
                 "type": "direction",
                 "line": line_code,
+                "line_id": line_id,
                 "direction": head,
                 "trip_id": trip
             })
@@ -216,61 +240,85 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.directionsList.setItemWidget(item, widget)
 
     # ----------------------------------------------------
-    # CLICK EVENTS
+    # TAB 2 click handling
     # ----------------------------------------------------
     def _on_line_clicked(self, item):
+        """
+        First click: user selects a line.
+        → We load sublines of that line.
+        """
         idx = item.data(Qt.ItemDataRole.UserRole)
         line = self.lines_data[idx]
 
         line_id = self._extract_line_id(line)
         if not line_id:
-            QMessageBox.warning(self, "Error", "No line ID found.")
+            QMessageBox.warning(self, "Error", "No line ID found for this line.")
             return
 
         try:
             sublines = self.model.get_sublines(line_id)
         except Exception as e:
-            QMessageBox.critical(self, "Error loading sublines", str(e))
+            QMessageBox.critical(self, "Error al cargar sublíneas", str(e))
             return
 
         self._populate_sublines(sublines, line)
 
     def _on_direction_clicked(self, item):
+        """
+        Two possible clicks in the right list:
+        - Click on SUBLINE  → we load directions.
+        - Click on DIRECTION → we fetch route data and open map.
+        """
         data = item.data(Qt.ItemDataRole.UserRole)
         if not isinstance(data, dict):
             return
 
-        # First click on a subline -> load its directions
-        if data.get("type") == "subline":
-            sid = data.get("subline_id")
-            line_code = data.get("line", "?")
+        t = data.get("type")
+
+        # First level: subline → load directions
+        if t == "subline":
+            sid = data["subline_id"]
+            line_code = data["line"]
+            line_id = data.get("line_id")
+
             try:
                 directions = self.model.get_directions(sid)
             except Exception as e:
-                QMessageBox.critical(self, "Error loading directions", str(e))
+                QMessageBox.critical(self, "Error al cargar direcciones", str(e))
                 return
 
-            self._populate_directions(directions, line_code)
+            self._populate_directions(directions, line_code, line_id)
             return
 
-        # Second click on a real direction -> open map
-        if data.get("type") == "direction":
+        # Second level: direction → fetch stops + shape + open map
+        if t == "direction":
             line_code = data["line"]
-            direction = data.get("direction", "")
+            line_id = data.get("line_id")
+            direction = data.get("direction")
+            trip_id = data.get("trip_id")
 
-            # TODO: replace this with REAL EMT stop data when you hook trips to stops
-            stops = [
-                ("17", 39.5715, 2.6500, f"Parada 17 ({direction})"),
-                ("33", 39.5750, 2.6400, f"Parada 33 ({direction})"),
-                ("401", 39.5650, 2.6550, f"Parada 401 ({direction})"),
-            ]
+            if not line_id or not trip_id:
+                QMessageBox.warning(self, "Error", "Datos de línea o viaje incompletos.")
+                return
 
-            self.mapWindow = MapWindow(line_code, stops)
+            try:
+                stops = self.model.get_route_stops(line_id, trip_id)
+                shape = self.model.get_route_shape(line_id, trip_id)
+            except Exception as e:
+                QMessageBox.critical(self, "Error al cargar datos de mapa", str(e))
+                return
+
+            if not stops:
+                QMessageBox.warning(self, "Sin paradas", "No se han encontrado paradas para esta ruta.")
+                return
+
+            # Open map window with real EMT data
+            self.mapWindow = MapWindow(line_code, stops, shape)
             self.mapWindow.bridge.stopSelected.connect(self._on_map_stop_selected)
             self.mapWindow.show()
 
     # ----------------------------------------------------
-    # TAB 1 STOP LOOKUP
+    # TAB 1 — Stop lookup
     # ----------------------------------------------------
     def check_stop(self):
         stop = self.stopInput.text().strip()
@@ -287,6 +335,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             QMessageBox.critical(self, "Error", str(e))
 
     def show_arrivals(self, result):
+        """
+        Render arrivals cards in the scroll area for Tab 1.
+        """
         layout = QVBoxLayout()
 
         for bus in result["data"]:
@@ -312,6 +363,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.timestampLabel.setText(f"Last updated: {result['timestamp']}")
 
     def add_to_history(self, stop):
+        """
+        Manage the quick-access buttons for recently checked stops.
+        """
         if stop in self.recent_stops:
             self.recent_stops.remove(stop)
         self.recent_stops.insert(0, stop)
@@ -328,16 +382,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.recentGrid.addWidget(btn, i // 3, i % 3)
 
     def load_from_history(self, stop):
+        """
+        Called when user clicks a button in the history grid.
+        """
         self.stopInput.setText(stop)
         self.check_stop()
 
     # ----------------------------------------------------
-    # MAP → TAB 1
+    # MAP → TAB 1: When a stop is clicked on the map
     # ----------------------------------------------------
     def _on_map_stop_selected(self, stop_id: str):
         """
-        Called when the user clicks a stop in the map.
-        It switches to Tab 1 and behaves like consulting that stop.
+        Called by the MapWindow when user presses
+        'Consultar parada' on a marker popup.
         """
         self.tabWidget.setCurrentIndex(0)
         self.stopInput.setText(stop_id)
