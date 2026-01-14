@@ -38,7 +38,7 @@ After each one, the tester must visually inspect the map and press **ENTER** to 
 
 **Screenshot Example:**
 
-![Scenario 1](screenshots/scenario1.png)
+[Scenario 1](screenshots/scenario1.png)
 
 ---
 
